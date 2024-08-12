@@ -1,6 +1,7 @@
-const app = require("./app.js");
 const { connectDB, closeDB } = require("./config/dbconfig.js");
 const { PORT } = require("./config/server-config.js");
+
+const app = require("./app.js");
 
 let server;
 async function startServer() {
@@ -29,5 +30,5 @@ async function closeServer() {
 
 startServer();
 
-process.on('SIGTERM', closeServer);             // close process;
-process.on('SIGINT', closeServer);              // CTRL + C
+process.on("SIGTERM", closeServer); // close process;
+process.on("SIGINT", closeServer); // CTRL + C
