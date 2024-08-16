@@ -1,5 +1,14 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const util = require("util");
+
+const {
+    ACCESS_TOKEN_SECRET_STRING,
+    REFRESH_TOKEN_SECRET_STRING,
+} = require("../config/server-config.js");
+const { ApiError } = require("../utils/error/api-error.js");
+
 const usersSchema = new mongoose.Schema(
     {
         email: {
@@ -31,14 +40,19 @@ const usersSchema = new mongoose.Schema(
             ref: "UserDetail",
         },
         role: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Role",
+            type: String,
+            enum: ["customer", "staff", "admin"],
+            default: "customer",
+            required: true,
         },
         passwordExpiry: {
             type: Date,
         },
         loginAttempts: {
             type: Number,
+        },
+        refreshToken: {
+            type: String,
         },
     },
     { timestamps: true }
@@ -52,22 +66,65 @@ usersSchema
     .set(function (fullName) {
         const fullNameArr = fullName.split(" ");
         const fName = fullNameArr[0].trim(); // extract firstName
-        const lName = fullNameArr[fullNameArr.length - 1]; // extract lastName
+        const lName = fullNameArr[fullNameArr.length - 1].trim(); // extract lastName
         this.set({ firstName: fName, lastName: lName });
     });
 
 usersSchema
-    .virtual("safeUser") // remove unwanted fields while returning the data
+    .virtual("safeUser") // only return required fields;
     .get(function () {
-        const responseObject = this.toObject();
-        delete responseObject.password_hash;
-        delete responseObject._id;
-        delete responseObject.createdAt;
-        delete responseObject.updatedAt;
-        delete responseObject.__v;
-        responseObject["fullName"] = this.fullName;
-        return responseObject;
+        return {
+            email: this.email,
+            name: this.fullName,
+            role: this.role,
+        };
     });
+
+usersSchema.methods.generateAccessToken = async function () {
+    const signAsync = util.promisify(jwt.sign);
+    try {
+        const accessToken = await signAsync(
+            {
+                userId: this._id,
+                email: this.email,
+                role: this.role,
+            },
+            ACCESS_TOKEN_SECRET_STRING,
+            {
+                expiresIn: "15m",
+            }
+        );
+        return accessToken;
+    } catch (error) {
+        console.log("Error generating access token");
+        throw new ApiError(
+            "Server Error",
+            "Internal Server Error, try again later"
+        );
+    }
+};
+
+usersSchema.methods.generateRefreshToken = async function () {
+    const signAsync = util.promisify(jwt.sign);
+    try {
+        const refreshToken = await signAsync(
+            {
+                userId: this._id,
+            },
+            REFRESH_TOKEN_SECRET_STRING,
+            {
+                expiresIn: "15d",
+            }
+        );
+        return refreshToken;
+    } catch (error) {
+        console.log("Error generating refresh token");
+        throw new ApiError(
+            "Server Error",
+            "Internal Server Error, try again later"
+        );
+    }
+};
 
 usersSchema.pre("save", async function (next) {
     try {

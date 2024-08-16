@@ -1,5 +1,5 @@
 const { StatusCodes } = require("http-status-codes");
-const { User, Role } = require("../models/index.js");
+const { User } = require("../models/index.js");
 const { ApiError } = require("../utils/error/api-error.js");
 
 class UserService {
@@ -9,6 +9,7 @@ class UserService {
             const presentUser =
                 (await User.findOne({ email: data.email })) || {};
             if (Object.keys(presentUser).length) {
+                // user found
                 throw new ApiError(
                     "User already exist",
                     "User with this email already exists!",
@@ -16,16 +17,22 @@ class UserService {
                 );
             }
 
-            // if not already exist, create another user;
-            const role = await Role.find({ role: "customer" }).exec(); // be default customer role will be assigned;
+            // create user, if not exist already;
             const userData = {
                 email: data.email,
                 password: data.password,
                 fullName: data.fullName,
-                role: role._id,
             };
             const user = await User.create(userData);
-            return user.safeUser;
+            const accessToken = await user.generateAccessToken();
+            const refreshToken = await user.generateRefreshToken();
+            user.refreshToken = refreshToken;
+            await user.save();
+            return {
+                accessToken,
+                refreshToken,
+                userData: user.safeUser,
+            };
         } catch (error) {
             throw error;
         }

@@ -18,7 +18,22 @@ const signupUser = async (req, res) => {
         const response = await userService.signup(data);
         return res
             .status(StatusCodes.CREATED)
-            .json(new ResponseSuccess(response, "User sign up successful"));
+            .cookie("accessToken", response.accessToken, {
+                httpOnly: true,
+                secure: true,
+                maxAge: 15 * 60 * 1000, // 15 mins
+            })
+            .cookie("refreshToken", response.refreshToken, {
+                httpOnly: true,
+                secure: true,
+                maxAge: 15 * 24 * 60 * 1000, // 15 days
+            })
+            .json(
+                new ResponseSuccess(
+                    response.userData,
+                    "User sign up successful"
+                )
+            );
     } catch (error) {
         return res
             .status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR)
