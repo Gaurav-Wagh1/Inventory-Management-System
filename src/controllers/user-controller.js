@@ -46,6 +46,39 @@ const signupUser = async (req, res) => {
     }
 };
 
+const signInUser = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const { accessToken, refreshToken } = await userService.signIn({
+            email,
+            password,
+        });
+        return res
+            .status(StatusCodes.CREATED)
+            .cookie("accessToken", accessToken, {
+                httpOnly: true,
+                secure: true,
+                maxAge: 15 * 60 * 1000, // 15 mins
+            })
+            .cookie("refreshToken", refreshToken, {
+                httpOnly: true,
+                secure: true,
+                maxAge: 15 * 24 * 60 * 1000, // 15 days
+            })
+            .json(new ResponseSuccess({}, "User sign in successful"));
+    } catch (error) {
+        return res
+            .status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR)
+            .json(
+                new ResponseError(
+                    error.error,
+                    error.message || "Something went wrong!"
+                )
+            );
+    }
+};
+
 module.exports = {
     signupUser,
+    signInUser,
 };

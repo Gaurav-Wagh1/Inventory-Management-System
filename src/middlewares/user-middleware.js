@@ -60,6 +60,49 @@ async function validateSignup(req, res, next) {
     next();
 }
 
+async function validateSignIn(req, res, next) {
+    if (!req.body.email || !req.body.password) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(
+                new ResponseError(
+                    "Signin failed",
+                    "Provide email and password!"
+                )
+            );
+    }
+
+    // email verification;
+    const regexForEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!regexForEmail.test(req.body.email)) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(
+                new ResponseError(
+                    "Incorrect email",
+                    "Please enter a valid email address!"
+                )
+            );
+    }
+
+    // password verification;
+    const regexForPassword =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,20}$/;
+    if (!regexForPassword.test(req.body.password)) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(
+                new ResponseError(
+                    "Incorrect password",
+                    "Please enter a valid password!"
+                )
+            );
+    }
+
+    next();
+}
+
 module.exports = {
     validateSignup,
+    validateSignIn,
 };

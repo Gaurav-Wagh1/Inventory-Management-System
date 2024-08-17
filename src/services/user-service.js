@@ -37,6 +37,43 @@ class UserService {
             throw error;
         }
     }
+
+    async signIn(data) {
+        try {
+            const user = await User.findOne({ email: data.email });
+
+            // user not found;
+            if (!user) {
+                throw new ApiError(
+                    "No such user",
+                    "No user found, signup first!",
+                    StatusCodes.BAD_REQUEST
+                );
+            }
+
+            const isPasswordCorrect = await user.comparePassword(data.password);
+            // incorrect password;
+            if (!isPasswordCorrect) {
+                throw new ApiError(
+                    "Incorrect password",
+                    "Enter correct password",
+                    StatusCodes.BAD_REQUEST
+                );
+            }
+
+            const accessToken = await user.generateAccessToken();
+            const refreshToken = await user.generateRefreshToken();
+            user.refreshToken = refreshToken;
+            await user.save();
+
+            return {
+                accessToken,
+                refreshToken,
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = { UserService };

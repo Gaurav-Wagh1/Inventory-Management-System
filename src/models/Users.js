@@ -23,7 +23,6 @@ const usersSchema = new mongoose.Schema(
             type: String,
             required: [true, "provide password"],
             alias: "password",
-            select: false,
         },
         firstName: {
             type: String,
@@ -123,6 +122,14 @@ usersSchema.methods.generateRefreshToken = async function () {
             "Server Error",
             "Internal Server Error, try again later"
         );
+    }
+};
+
+usersSchema.methods.comparePassword = async function (passwordToCompare) {
+    try {
+        return await bcrypt.compare(passwordToCompare, this.password_hash);
+    } catch (error) {
+        throw error;
     }
 };
 
