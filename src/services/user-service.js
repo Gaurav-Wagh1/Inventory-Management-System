@@ -74,6 +74,14 @@ class UserService {
             throw error;
         }
     }
+
+    async logOut(data) {
+        try {
+            await User.findByIdAndUpdate(data.userId, { refreshToken: "" });
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = { UserService };

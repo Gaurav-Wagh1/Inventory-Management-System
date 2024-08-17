@@ -54,7 +54,7 @@ const signInUser = async (req, res) => {
             password,
         });
         return res
-            .status(StatusCodes.CREATED)
+            .status(StatusCodes.OK)
             .cookie("accessToken", accessToken, {
                 httpOnly: true,
                 secure: true,
@@ -78,7 +78,36 @@ const signInUser = async (req, res) => {
     }
 };
 
+const logoutUser = async (req, res) => {
+    try {
+        await userService.logOut(req.user);
+        return res
+            .status(StatusCodes.OK)
+            .clearCookie("accessToken", {
+                httpOnly: true,
+                secure: true,
+                maxAge: 15 * 60 * 1000, // 15 mins
+            })
+            .clearCookie("refreshToken", {
+                httpOnly: true,
+                secure: true,
+                maxAge: 15 * 24 * 60 * 1000, // 15 days
+            })
+            .json(new ResponseSuccess({}, "Logout successful"));
+    } catch (error) {
+        return res
+            .status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR)
+            .json(
+                new ResponseError(
+                    error.error,
+                    error.message || "Something went wrong in logout!"
+                )
+            );
+    }
+};
+
 module.exports = {
     signupUser,
     signInUser,
+    logoutUser,
 };

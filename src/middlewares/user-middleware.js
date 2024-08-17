@@ -1,9 +1,12 @@
 const axios = require("axios");
 const { StatusCodes } = require("http-status-codes");
 
+const jwt = require("jsonwebtoken");
+
 const {
     EMAIL_VERIFICATION_URL,
     EMAIL_VERIFICATION_KEY,
+    REFRESH_TOKEN_SECRET_STRING,
 } = require("../config/server-config.js");
 
 const { ResponseError } = require("../utils/response/response.js");
@@ -102,7 +105,37 @@ async function validateSignIn(req, res, next) {
     next();
 }
 
+async function validateLogout(req, res, next) {
+    if (!req.cookies.refreshToken && !req.body.refreshToken) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(
+                new ResponseError(
+                    "Logout failed",
+                    "Provide email and password!"
+                )
+            );
+    }
+
+    const token = req.cookies.refreshToken || req.body.refreshToken;
+    try {
+        const response = jwt.verify(token, REFRESH_TOKEN_SECRET_STRING);
+        req.user = { refreshToken: token, userId: response.userId };
+    } catch (error) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(
+                new ResponseError(
+                    "Logout failed",
+                    "Provide valid refresh token!"
+                )
+            );
+    }
+
+    next();
+}
 module.exports = {
     validateSignup,
     validateSignIn,
+    validateLogout,
 };
