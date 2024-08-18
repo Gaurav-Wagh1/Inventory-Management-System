@@ -145,9 +145,33 @@ const refreshAccessToken = async (req, res) => {
     }
 };
 
+const updateDetails = async (req, res) => {
+    try {
+        const response = await userService.updateDetails(req.user, req.body);
+        return res
+            .status(StatusCodes.OK)
+            .json(
+                new ResponseSuccess(
+                    response,
+                    "User details updated successfully!"
+                )
+            );
+    } catch (error) {
+        return res
+            .status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR)
+            .json(
+                new ResponseError(
+                    error.error,
+                    error.message || "Something went wrong in update details!"
+                )
+            );
+    }
+};
+
 module.exports = {
     signupUser,
     signInUser,
     logoutUser,
+    updateDetails,
     refreshAccessToken,
 };

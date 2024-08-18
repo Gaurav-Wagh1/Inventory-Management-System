@@ -7,6 +7,7 @@ const {
     EMAIL_VERIFICATION_URL,
     EMAIL_VERIFICATION_KEY,
     REFRESH_TOKEN_SECRET_STRING,
+    ACCESS_TOKEN_SECRET_STRING,
 } = require("../config/server-config.js");
 
 const { ResponseError } = require("../utils/response/response.js");
@@ -155,9 +156,33 @@ async function validateRefreshAccessToken(req, res, next) {
     next();
 }
 
+async function validateDetailsRequest(req, res, next) {
+    const accessToken =
+        req.cookies?.accessToken ||
+        req.header("Authorization")?.replace("Bearer ", "");
+    if (!accessToken) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(new ResponseError("Unauthorized user", "Please Sign in!"));
+    }
+
+    const payload = jwt.verify(accessToken, ACCESS_TOKEN_SECRET_STRING);
+
+    if (!payload || !payload.userId || !payload.email) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(new ResponseError("Unauthorized user", "Please Sign in!"));
+    }
+    const { userId, email, role } = payload;
+    req.user = { userId, email, role };
+
+    next();
+}
+
 module.exports = {
     validateSignup,
     validateSignIn,
     validateLogout,
+    validateDetailsRequest,
     validateRefreshAccessToken,
 };

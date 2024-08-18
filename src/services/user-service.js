@@ -1,5 +1,5 @@
 const { StatusCodes } = require("http-status-codes");
-const { User } = require("../models/index.js");
+const { User, UserDetail } = require("../models/index.js");
 const { ApiError } = require("../utils/error/api-error.js");
 
 class UserService {
@@ -106,6 +106,54 @@ class UserService {
                 refreshToken: newRefreshToken,
                 accessToken: newAccessToken,
             };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async updateDetails(userData, userDetails) {
+        try {
+            const user = await User.findById(userData.userId);
+
+            // user not found;
+            if (!user) {
+                throw new ApiError(
+                    "Invalid token",
+                    "Sign in again!",
+                    StatusCodes.BAD_REQUEST
+                );
+            }
+
+            // update the fullName if user wants to;
+            if (userDetails.fullName) {
+                user.fullName = userDetails.fullName;
+                delete userDetails.fullName;
+            }
+
+            // if only fullName is there to update, return after updating fullName;
+            if (Object.keys(userDetails).length == 0) {
+                await user.save();
+                return "";
+            }
+
+            // if user wants to update other data;
+            const userDetailsId = user.details;
+            let response;
+
+            // if already exists, then update the details;
+            if (userDetailsId) {
+                response = await UserDetail.findByIdAndUpdate(
+                    userDetailsId,
+                    { $set: userDetails },
+                    { new: true }
+                );
+            } else {
+                response = await UserDetail.create(userDetails); // if not exists, then create the document with details;
+                user.details = response._id;
+            }
+            await user.save();
+
+            return response;
         } catch (error) {
             throw error;
         }

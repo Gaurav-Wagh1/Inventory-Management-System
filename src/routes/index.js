@@ -6,11 +6,13 @@ const {
     signInUser,
     logoutUser,
     refreshAccessToken,
+    updateDetails,
 } = require("../controllers/user-controller.js");
 const {
     validateSignup,
     validateSignIn,
     validateLogout,
+    validateDetailsRequest,
     validateRefreshAccessToken,
 } = require("../middlewares/user-middleware.js");
 
@@ -25,5 +27,7 @@ router.post(
     validateRefreshAccessToken,
     refreshAccessToken
 );
+
+router.patch("/users/details", validateDetailsRequest, updateDetails);
 
 module.exports = router;
