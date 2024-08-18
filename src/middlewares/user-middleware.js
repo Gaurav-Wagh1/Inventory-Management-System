@@ -134,8 +134,30 @@ async function validateLogout(req, res, next) {
 
     next();
 }
+
+async function validateRefreshAccessToken(req, res, next) {
+    if (!req.cookies.refreshToken && !req.body.refreshToken) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(new ResponseError("Token refresh failed", "Please Sign in!"));
+    }
+
+    const token = req.cookies.refreshToken || req.body.refreshToken;
+    try {
+        const response = jwt.verify(token, REFRESH_TOKEN_SECRET_STRING);
+        req.user = { refreshToken: token, userId: response.userId };
+    } catch (error) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(new ResponseError("Token refresh failed", "Please Sign in!"));
+    }
+
+    next();
+}
+
 module.exports = {
     validateSignup,
     validateSignIn,
     validateLogout,
+    validateRefreshAccessToken,
 };

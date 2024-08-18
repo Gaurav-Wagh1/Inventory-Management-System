@@ -82,6 +82,34 @@ class UserService {
             throw error;
         }
     }
+
+    async refreshAccessToken(data) {
+        try {
+            const user = await User.findById(data.userId);
+            if (user.refreshToken !== data.refreshToken) {
+                user.refreshToken = "";
+                await user.save();
+                throw new ApiError(
+                    "Invalid token",
+                    "Invalid token, sign in again to access account",
+                    StatusCodes.CONFLICT
+                );
+            }
+
+            const newRefreshToken = await user.generateRefreshToken();
+            const newAccessToken = await user.generateAccessToken();
+
+            user.refreshToken = newRefreshToken;
+            await user.save();
+
+            return {
+                refreshToken: newRefreshToken,
+                accessToken: newAccessToken,
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = { UserService };

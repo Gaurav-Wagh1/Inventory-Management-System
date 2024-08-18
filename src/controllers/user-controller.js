@@ -106,8 +106,48 @@ const logoutUser = async (req, res) => {
     }
 };
 
+const refreshAccessToken = async (req, res) => {
+    try {
+        const { refreshToken, accessToken } =
+            await userService.refreshAccessToken(req.user);
+        return res
+            .status(StatusCodes.OK)
+            .cookie("accessToken", accessToken, {
+                httpOnly: true,
+                secure: true,
+                maxAge: 15 * 60 * 1000, // 15 mins
+            })
+            .cookie("refreshToken", refreshToken, {
+                httpOnly: true,
+                secure: true,
+                maxAge: 15 * 24 * 60 * 1000, // 15 days
+            })
+            .json(new ResponseSuccess({}, "Tokens refreshed successfully!"));
+    } catch (error) {
+        return res
+            .status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR)
+            .clearCookie("accessToken", {
+                httpOnly: true,
+                secure: true,
+                maxAge: 15 * 60 * 1000, // 15 mins
+            })
+            .clearCookie("refreshToken", {
+                httpOnly: true,
+                secure: true,
+                maxAge: 15 * 24 * 60 * 1000, // 15 days
+            })
+            .json(
+                new ResponseError(
+                    error.error,
+                    error.message || "Something went wrong in logout!"
+                )
+            );
+    }
+};
+
 module.exports = {
     signupUser,
     signInUser,
     logoutUser,
+    refreshAccessToken,
 };
