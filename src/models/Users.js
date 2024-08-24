@@ -24,20 +24,6 @@ const usersSchema = new mongoose.Schema(
             required: [true, "provide password"],
             alias: "password",
         },
-        firstName: {
-            type: String,
-            required: [true, "provide firstName"],
-            trim: true,
-        },
-        lastName: {
-            type: String,
-            required: [true, "provide lastName"],
-            trim: true,
-        },
-        details: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "UserDetail",
-        },
         role: {
             type: String,
             enum: ["customer", "staff", "admin"],
@@ -58,23 +44,10 @@ const usersSchema = new mongoose.Schema(
 );
 
 usersSchema
-    .virtual("fullName")
-    .get(function () {
-        return `${this.firstName} ${this.lastName}`;
-    })
-    .set(function (fullName) {
-        const fullNameArr = fullName.split(" ");
-        const fName = fullNameArr[0].trim(); // extract firstName
-        const lName = fullNameArr[fullNameArr.length - 1].trim(); // extract lastName
-        this.set({ firstName: fName, lastName: lName });
-    });
-
-usersSchema
     .virtual("safeUser") // only return required fields;
     .get(function () {
         return {
             email: this.email,
-            name: this.fullName,
             role: this.role,
         };
     });

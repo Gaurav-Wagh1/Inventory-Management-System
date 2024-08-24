@@ -13,7 +13,6 @@ const signupUser = async (req, res) => {
         const data = {
             email: req.body.email,
             password: req.body.password,
-            fullName: req.body.fullName,
         };
         const response = await userService.signup(data);
         return res

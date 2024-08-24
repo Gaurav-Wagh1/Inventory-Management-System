@@ -1,5 +1,10 @@
 const { StatusCodes } = require("http-status-codes");
-const { User, UserDetail } = require("../models/index.js");
+const {
+    User,
+    AdminDetail,
+    CustomerDetail,
+    StaffDetail,
+} = require("../models/index.js");
 const { ApiError } = require("../utils/error/api-error.js");
 
 class UserService {
@@ -21,7 +26,6 @@ class UserService {
             const userData = {
                 email: data.email,
                 password: data.password,
-                fullName: data.fullName,
             };
             const user = await User.create(userData);
             const accessToken = await user.generateAccessToken();
@@ -124,36 +128,83 @@ class UserService {
                 );
             }
 
-            // update the fullName if user wants to;
-            if (userDetails.fullName) {
-                user.fullName = userDetails.fullName;
-                delete userDetails.fullName;
-            }
-
-            // if only fullName is there to update, return after updating fullName;
-            if (Object.keys(userDetails).length == 0) {
-                await user.save();
-                return "";
-            }
-
-            // if user wants to update other data;
-            const userDetailsId = user.details;
-            let response;
-
-            // if already exists, then update the details;
-            if (userDetailsId) {
-                response = await UserDetail.findByIdAndUpdate(
-                    userDetailsId,
-                    { $set: userDetails },
-                    { new: true }
+            // role is not aligning with received role;
+            if (userData.role !== user.role) {
+                this.logOut(userData);
+                throw new ApiError(
+                    "Invalid token",
+                    "Sign in again",
+                    StatusCodes.BAD_REQUEST
                 );
-            } else {
-                response = await UserDetail.create(userDetails); // if not exists, then create the document with details;
-                user.details = response._id;
             }
-            await user.save();
 
-            return response;
+            // role based data update;
+            let updatedUserDetails = {};
+            switch (userData.role) {
+                case "customer":
+                    let customerDetails = await CustomerDetail.findOne({
+                        user: user.id,
+                    });
+
+                    if (!customerDetails) {
+                        userDetails.user = user.id;
+                        updatedUserDetails =
+                            await CustomerDetail.create(userDetails);
+                    } else {
+                        updatedUserDetails =
+                            await CustomerDetail.findByIdAndUpdate(
+                                customerDetails.id,
+                                { $set: userDetails },
+                                { new: true }
+                            );
+                    }
+                    break;
+                case "staff":
+                    let staffDetails = await StaffDetail.findOne({
+                        user: user.id,
+                    });
+
+                    if (!staffDetails) {
+                        userDetails.user = user.id;
+                        updatedUserDetails =
+                            await StaffDetail.create(userDetails);
+                    } else {
+                        updatedUserDetails =
+                            await StaffDetail.findByIdAndUpdate(
+                                staffDetails.id,
+                                { $set: userDetails },
+                                { new: true }
+                            );
+                    }
+                    break;
+                case "admin":
+                    let adminDetails = await AdminDetail.findOne({
+                        user: user.id,
+                    });
+
+                    if (!adminDetails) {
+                        userDetails.user = user.id;
+                        updatedUserDetails =
+                            await AdminDetail.create(userDetails);
+                    } else {
+                        updatedUserDetails =
+                            await AdminDetail.findByIdAndUpdate(
+                                adminDetails.id,
+                                { $set: userDetails },
+                                { new: true }
+                            );
+                    }
+                    break;
+
+                default:
+                    throw new ApiError(
+                        "Invalid role",
+                        "Login again",
+                        StatusCodes.BAD_REQUEST
+                    );
+            }
+
+            return updatedUserDetails;
         } catch (error) {
             throw error;
         }

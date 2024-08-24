@@ -13,7 +13,7 @@ const {
 const { ResponseError } = require("../utils/response/response.js");
 
 async function validateSignup(req, res, next) {
-    if (!req.body.email || !req.body.password || !req.body.fullName) {
+    if (!req.body.email || !req.body.password) {
         return res
             .status(StatusCodes.BAD_REQUEST)
             .json(
