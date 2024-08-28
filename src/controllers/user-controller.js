@@ -167,10 +167,83 @@ const updateDetails = async (req, res) => {
     }
 };
 
+const updateRole = async (req, res) => {
+    try {
+        const { userId, role } = req.body;
+        await userService.updateRole({ userId, role });
+        return res
+            .status(StatusCodes.OK)
+            .json(
+                new ResponseSuccess(
+                    {},
+                    `Successfully updated the user role to ${req.body.role}`
+                )
+            );
+    } catch (error) {
+        return res
+            .status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR)
+            .json(
+                new ResponseError(
+                    error.error,
+                    error.message || "Something went wrong in role update!"
+                )
+            );
+    }
+};
+
+const getSelfDetails = async (req, res) => {
+    try {
+        const response = await userService.getSelfDetails(req.user);
+        return res
+            .status(StatusCodes.OK)
+            .json(
+                new ResponseSuccess(
+                    response,
+                    `Successfully fetched user details`
+                )
+            );
+    } catch (error) {
+        return res
+            .status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR)
+            .json(
+                new ResponseError(
+                    error.error,
+                    error.message || "Something went wrong in data fetch!"
+                )
+            );
+    }
+};
+
+const getDetails = async (req, res) => {
+    try {
+        const response = await userService.getDetails(req.user, req.params.id);
+        return res
+            .status(StatusCodes.OK)
+            .json(
+                new ResponseSuccess(
+                    response,
+                    `Successfully fetched user details`
+                )
+            );
+    } catch (error) {
+        return res
+            .status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR)
+            .json(
+                new ResponseError(
+                    error.error,
+                    error.message || "Something went wrong in data fetch!"
+                )
+            );
+    }
+};
+
 module.exports = {
     signupUser,
     signInUser,
     logoutUser,
+    updateRole,
+    getDetails,
     updateDetails,
+    getSelfDetails,
     refreshAccessToken,
 };

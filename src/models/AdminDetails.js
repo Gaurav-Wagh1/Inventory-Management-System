@@ -33,6 +33,12 @@ adminSchema
         this.set({ firstName: fName, lastName: lName });
     });
 
+adminSchema.virtual("safeDetails").get(function () {
+    return {
+        fullName: this.fullName,
+    };
+});
+
 const AdminDetail = mongoose.model("AdminDetail", adminSchema);
 
 module.exports = { AdminDetail };

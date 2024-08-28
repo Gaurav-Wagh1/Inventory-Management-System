@@ -63,6 +63,20 @@ customerDetailsSchema
         this.set({ firstName: fName, lastName: lName });
     });
 
+customerDetailsSchema.virtual("safeDetails").get(function () {
+    const { fullName, phoneNumber, address, city, state, country, postalCode } =
+        this;
+    return {
+        fullName,
+        phoneNumber,
+        address,
+        city,
+        state,
+        country,
+        postalCode,
+    };
+});
+
 const CustomerDetail = mongoose.model("CustomerDetail", customerDetailsSchema);
 
 module.exports = { CustomerDetail };

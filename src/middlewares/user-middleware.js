@@ -145,9 +145,24 @@ async function validateRefreshAccessToken(req, res, next) {
 
     const token = req.cookies.refreshToken || req.body.refreshToken;
     try {
-        const response = jwt.verify(token, REFRESH_TOKEN_SECRET_STRING);
-        req.user = { refreshToken: token, userId: response.userId };
+        const payload = jwt.verify(token, REFRESH_TOKEN_SECRET_STRING);
+        if (!payload || !payload.userId) {
+            return res
+                .status(StatusCodes.BAD_REQUEST)
+                .json({
+                    error: "Unauthorized user",
+                    message: "Please Sign in!",
+                });
+        }
+        req.user = { refreshToken: token, userId: payload.userId };
     } catch (error) {
+        if (err.name === "TokenExpiredError") {
+            return res
+                .status(StatusCodes.UNAUTHORIZED)
+                .json(
+                    new ResponseError("Token expired", "Please refresh token!")
+                );
+        }
         return res
             .status(StatusCodes.BAD_REQUEST)
             .json(new ResponseError("Token refresh failed", "Please Sign in!"));
@@ -156,19 +171,29 @@ async function validateRefreshAccessToken(req, res, next) {
     next();
 }
 
-async function validateDetailsRequest(req, res, next) {
+async function validateRequest(req, res, next) {
     const accessToken =
         req.cookies?.accessToken ||
         req.header("Authorization")?.replace("Bearer ", "");
     if (!accessToken) {
         return res
-            .status(StatusCodes.BAD_REQUEST)
+            .status(StatusCodes.UNAUTHORIZED)
             .json(new ResponseError("Unauthorized user", "Please Sign in!"));
     }
+    let payload;
+    try {
+        payload = jwt.verify(accessToken, ACCESS_TOKEN_SECRET_STRING);
+    } catch (error) {
+        if (err.name === "TokenExpiredError") {
+            return res
+                .status(StatusCodes.UNAUTHORIZED)
+                .json(
+                    new ResponseError("Token expired", "Please log in again.")
+                );
+        }
+    }
 
-    const payload = jwt.verify(accessToken, ACCESS_TOKEN_SECRET_STRING);
-
-    if (!payload || !payload.userId || !payload.email) {
+    if (!payload || !payload.userId || !payload.email || !payload.role) {
         return res
             .status(StatusCodes.BAD_REQUEST)
             .json(new ResponseError("Unauthorized user", "Please Sign in!"));
@@ -179,10 +204,116 @@ async function validateDetailsRequest(req, res, next) {
     next();
 }
 
+async function validateUpdateRole(req, res, next) {
+    const token = req.cookies.accessToken || req.body.accessToken;
+    if (!token) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(
+                new ResponseError(
+                    "Un-authorized user",
+                    "You are not authorized to perform this action!"
+                )
+            );
+    }
+
+    if (!req.body.userId || !req.body.role) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(
+                new ResponseError(
+                    "Invalid Credentials",
+                    "Provide valid credentials to update the role!"
+                )
+            );
+    }
+
+    let response;
+    try {
+        response = jwt.verify(token, ACCESS_TOKEN_SECRET_STRING);
+    } catch (error) {
+        if (err.name === "TokenExpiredError") {
+            return res
+                .status(StatusCodes.UNAUTHORIZED)
+                .json(
+                    new ResponseError("Token expired", "Please log in again.")
+                );
+        }
+    }
+
+    if (response.role !== "admin") {
+        return res
+            .status(StatusCodes.UNAUTHORIZED)
+            .json(
+                new ResponseError(
+                    "Un-authorized user",
+                    "You are not authorized to perform this action!"
+                )
+            );
+    }
+    // req.user = { userId: response.userId, role: response.role };
+
+    next();
+}
+
+async function validateGetDetailsRequest(req, res, next) {
+    // token does not exits;
+    const accessToken =
+        req.cookies?.accessToken ||
+        req.header("Authorization")?.replace("Bearer ", "");
+    if (!accessToken) {
+        return res
+            .status(StatusCodes.UNAUTHORIZED)
+            .json(new ResponseError("Unauthorized user", "Please Sign in!"));
+    }
+
+    // check weather the token is valid or not;
+    let payload;
+    try {
+        payload = jwt.verify(accessToken, ACCESS_TOKEN_SECRET_STRING);
+    } catch (error) {
+        if (err.name === "TokenExpiredError") {
+            return res
+                .status(StatusCodes.UNAUTHORIZED)
+                .json(
+                    new ResponseError("Token expired", "Please refresh token!")
+                );
+        }
+    }
+
+    // check weather the token has all required payload information or not;
+    if (!payload || !payload.userId || !payload.email || !payload.role) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(new ResponseError("Unauthorized user", "Please Sign in!"));
+    }
+
+    // only admin and staff has authority to check other users details;
+    // staff can get customers details;
+    // admins can get any users details;
+    // customers cannot fetch other user's details;
+    if (payload.role !== "admin" && payload.role !== "staff") {
+        return res
+            .status(StatusCodes.UNAUTHORIZED)
+            .json(
+                new ResponseError(
+                    "Unauthorized user",
+                    "You are not authorized to perform this action!"
+                )
+            );
+    }
+
+    req.user = { userId: payload.userId, role: payload.role };
+
+    next();
+}
+
 module.exports = {
     validateSignup,
     validateSignIn,
     validateLogout,
-    validateDetailsRequest,
+    validateRequest,
+    validateUpdateRole,
+    validateGetDetailsRequest,
     validateRefreshAccessToken,
 };

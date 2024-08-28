@@ -36,6 +36,13 @@ staffDetailSchema
         this.set({ firstName: fName, lastName: lName });
     });
 
+staffDetailSchema.virtual("safeDetails").get(function () {
+    return {
+        fullName: this.fullName,
+        salary: this.salary.toString(),
+    };
+});
+
 const StaffDetail = mongoose.model("StaffDetail", staffDetailSchema);
 
 module.exports = { StaffDetail };

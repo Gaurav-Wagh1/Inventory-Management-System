@@ -209,6 +209,126 @@ class UserService {
             throw error;
         }
     }
+
+    async updateRole({ userId, role }) {
+        try {
+            const user = await User.findById(userId);
+
+            // user not found;
+            if (!user) {
+                throw new ApiError(
+                    "No such user",
+                    "No user found with this credentials!",
+                    StatusCodes.BAD_REQUEST
+                );
+            }
+
+            // delete if user has any details related to previous role;
+            switch (user.role) {
+                case "customer":
+                    await CustomerDetail.findOneAndDelete({ user: user.id });
+                    break;
+
+                case "staff":
+                    await StaffDetail.findOneAndDelete({ user: user.id });
+                    break;
+
+                default:
+                    throw new ApiError(
+                        "Invalid role",
+                        "Cannot perform this action!",
+                        StatusCodes.BAD_REQUEST
+                    );
+            }
+            // update user role and log out the user;
+            user.role = role;
+            user.refreshToken = "";
+            await user.save();
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async getSelfDetails(selfData) {
+        try {
+            const user = await User.findById(selfData.userId);
+            let userDetails;
+            switch (user.role) {
+                case "customer":
+                    userDetails = await CustomerDetail.findOne({
+                        user: user.id,
+                    });
+                    break;
+
+                case "staff":
+                    userDetails = await StaffDetail.findOne({ user: user.id });
+                    break;
+
+                case "admin":
+                    userDetails = await AdminDetail.findOne({ user: user.id });
+                    break;
+                default:
+                    throw new ApiError(
+                        "Invalid role",
+                        "Cannot perform this action!",
+                        StatusCodes.BAD_REQUEST
+                    );
+            }
+            return {
+                user: user.safeUser,
+                userDetails: userDetails?.safeDetails || {},
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async getDetails(userSelfData, requestedUserId) {
+        try {
+            const selfUser = await User.findById(userSelfData.userId);
+
+            if (selfUser.role === "customer") {
+                throw new ApiError(
+                    "UnAuthorized user",
+                    "You are not authorized to perform this action!",
+                    StatusCodes.UNAUTHORIZED
+                );
+            }
+
+            const requestedUserData = await this.getSelfDetails({
+                userId: requestedUserId,
+            });
+
+            switch (selfUser.role) {
+                case "staff":
+                    // staff member cannot access admin's or other staff member's details;
+                    if (
+                        requestedUserData.user.role === "admin" ||
+                        requestedUserData.user.role === "staff"
+                    ) {
+                        throw new ApiError(
+                            "UnAuthorized user",
+                            "You are not authorized to perform this action!",
+                            StatusCodes.UNAUTHORIZED
+                        );
+                    }
+                    return requestedUserData;
+                case "admin":
+                    // admin can access anyone's details;
+                    return requestedUserData;
+
+                default:
+                    throw new ApiError(
+                        "Invalid role",
+                        "You are not authorized to perform this action!",
+                        StatusCodes.UNAUTHORIZED
+                    );
+            }
+        } catch (error) {
+            // console.log(error)
+            throw error;
+        }
+    }
 }
 
 module.exports = { UserService };
