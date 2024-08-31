@@ -4,13 +4,36 @@ const { StatusCodes } = require("http-status-codes");
 const jwt = require("jsonwebtoken");
 
 const {
+    ADMIN_SECRET,
     EMAIL_VERIFICATION_URL,
     EMAIL_VERIFICATION_KEY,
     REFRESH_TOKEN_SECRET_STRING,
     ACCESS_TOKEN_SECRET_STRING,
+    SESSION_TOKEN_SECRET_STRING,
 } = require("../config/server-config.js");
 
 const { ResponseError } = require("../utils/response/response.js");
+
+async function validateAdminRequest(req, res, next) {
+    if (!req.body.adminSecret) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(
+                new ResponseError("Signup failed", "Provide admin secret!")
+            );
+    }
+
+    if (req.body.adminSecret !== ADMIN_SECRET) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(
+                new ResponseError("Invalid secret", "Provide valid admin secret!")
+            );
+    }
+
+    req.admin = true;
+    next();
+}
 
 async function validateSignup(req, res, next) {
     if (!req.body.email || !req.body.password) {
@@ -26,7 +49,7 @@ async function validateSignup(req, res, next) {
         const emailValidation = await axios.get(
             `${EMAIL_VERIFICATION_URL}/${req.body.email}/${EMAIL_VERIFICATION_KEY}`
         );
-        if (emailValidation.data.Status != "Valid") {
+        if (emailValidation.data.Status !== "Valid") {
             return res
                 .status(StatusCodes.BAD_REQUEST)
                 .json(
@@ -156,7 +179,7 @@ async function validateRefreshAccessToken(req, res, next) {
         }
         req.user = { refreshToken: token, userId: payload.userId };
     } catch (error) {
-        if (err.name === "TokenExpiredError") {
+        if (error.name === "TokenExpiredError") {
             return res
                 .status(StatusCodes.UNAUTHORIZED)
                 .json(
@@ -184,7 +207,7 @@ async function validateRequest(req, res, next) {
     try {
         payload = jwt.verify(accessToken, ACCESS_TOKEN_SECRET_STRING);
     } catch (error) {
-        if (err.name === "TokenExpiredError") {
+        if (error.name === "TokenExpiredError") {
             return res
                 .status(StatusCodes.UNAUTHORIZED)
                 .json(
@@ -232,7 +255,7 @@ async function validateUpdateRole(req, res, next) {
     try {
         response = jwt.verify(token, ACCESS_TOKEN_SECRET_STRING);
     } catch (error) {
-        if (err.name === "TokenExpiredError") {
+        if (error.name === "TokenExpiredError") {
             return res
                 .status(StatusCodes.UNAUTHORIZED)
                 .json(
@@ -272,7 +295,7 @@ async function validateGetDetailsRequest(req, res, next) {
     try {
         payload = jwt.verify(accessToken, ACCESS_TOKEN_SECRET_STRING);
     } catch (error) {
-        if (err.name === "TokenExpiredError") {
+        if (error.name === "TokenExpiredError") {
             return res
                 .status(StatusCodes.UNAUTHORIZED)
                 .json(
@@ -308,12 +331,55 @@ async function validateGetDetailsRequest(req, res, next) {
     next();
 }
 
+async function validate2FARequest(req, res, next) {
+    if (!req.cookies.session2FAToken && !req.body.session2FAToken) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(new ResponseError("Two Factor Authentication Failed", "Please Sign in again!"));
+    }
+
+    if (!req.body.totp) {
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(new ResponseError("Invalid credentials provided", "Please provide a valid code from authenticator app!"));
+    }
+
+    const token = req.cookies.session2FAToken || req.body.session2FAToken;
+    try {
+        const payload = jwt.verify(token, SESSION_TOKEN_SECRET_STRING);
+        if (!payload || !payload.userId) {
+            return res
+                .status(StatusCodes.BAD_REQUEST)
+                .json({
+                    error: "Unauthorized user",
+                    message: "Please Sign in!",
+                });
+        }
+        req.user = { userId: payload.userId };
+    } catch (error) {
+        if (error.name === "TokenExpiredError") {
+            return res
+                .status(StatusCodes.UNAUTHORIZED)
+                .json(
+                    new ResponseError("Token expired", "Time limit exceeded, kindly sign in again!")
+                );
+        }
+        return res
+            .status(StatusCodes.BAD_REQUEST)
+            .json(new ResponseError("2FA failed", "Please Sign in again!"));
+    }
+
+    next();
+}
+
 module.exports = {
     validateSignup,
     validateSignIn,
     validateLogout,
     validateRequest,
+    validate2FARequest,
     validateUpdateRole,
+    validateAdminRequest,
     validateGetDetailsRequest,
     validateRefreshAccessToken,
 };

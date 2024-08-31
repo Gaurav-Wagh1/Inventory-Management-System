@@ -17,6 +17,14 @@ const adminSchema = new mongoose.Schema(
             required: [true, "provide lastName"],
             trim: true,
         },
+        is2FAEnabled: {
+            type: Boolean,
+            default: false
+        },
+        twoFASecret: {
+            type: String,
+            trim: true
+        }
     },
     { timestamps: true }
 );

@@ -20,6 +20,14 @@ const staffDetailSchema = new mongoose.Schema(
         salary: {
             type: mongoose.Schema.Types.Decimal128,
         },
+        is2FAEnabled: {
+            type: Boolean,
+            default: false
+        },
+        twoFASecret: {
+            type: String,
+            trim: true
+        }
     },
     { timestamps: true }
 );

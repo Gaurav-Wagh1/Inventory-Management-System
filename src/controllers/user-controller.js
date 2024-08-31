@@ -13,6 +13,7 @@ const signupUser = async (req, res) => {
         const data = {
             email: req.body.email,
             password: req.body.password,
+            admin: req.admin
         };
         const response = await userService.signup(data);
         return res
@@ -48,23 +49,61 @@ const signupUser = async (req, res) => {
 const signInUser = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const { accessToken, refreshToken } = await userService.signIn({
+        const response = await userService.signIn({
             email,
             password,
         });
-        return res
-            .status(StatusCodes.OK)
-            .cookie("accessToken", accessToken, {
-                httpOnly: true,
-                secure: true,
-                maxAge: 15 * 60 * 1000, // 15 mins
-            })
-            .cookie("refreshToken", refreshToken, {
-                httpOnly: true,
-                secure: true,
-                maxAge: 15 * 24 * 60 * 1000, // 15 days
-            })
-            .json(new ResponseSuccess({}, "User sign in successful"));
+
+        if (response.is2FAEnabled == undefined) {
+            return res
+                .status(StatusCodes.OK)
+                .cookie("accessToken", response.accessToken, {
+                    httpOnly: true,
+                    secure: true,
+                    maxAge: 15 * 60 * 1000, // 15 mins
+                })
+                .cookie("refreshToken", response.refreshToken, {
+                    httpOnly: true,
+                    secure: true,
+                    maxAge: 15 * 24 * 60 * 1000, // 15 days
+                })
+                .json(
+                    new ResponseSuccess(
+                        {},
+                        "User sign in successful"
+                    )
+                );
+        }
+        else if (response.is2FAEnabled == true) {
+            return res
+                .status(StatusCodes.OK)
+                .cookie("session2FAToken", response.session2FAToken, {
+                    httpOnly: true,
+                    secure: true,
+                    maxAge: 5 * 60 * 1000, // 5 mins
+                })
+                .json(new ResponseSuccess({ is2FAEnabled: response.is2FAEnabled }, "Enter Authenticator code"));
+        }
+        else {
+            return res
+                .status(StatusCodes.OK)
+                .cookie("accessToken", response.accessToken, {
+                    httpOnly: true,
+                    secure: true,
+                    maxAge: 15 * 60 * 1000, // 15 mins
+                })
+                .cookie("refreshToken", response.refreshToken, {
+                    httpOnly: true,
+                    secure: true,
+                    maxAge: 15 * 24 * 60 * 1000, // 15 days
+                })
+                .json(
+                    new ResponseSuccess(
+                        { is2FAEnabled: response.is2FAEnabled },
+                        "User sign in successful"
+                    )
+                );
+        }
     } catch (error) {
         return res
             .status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR)
@@ -237,12 +276,75 @@ const getDetails = async (req, res) => {
     }
 };
 
+const enableTwoFA = async (req, res) => {
+    try {
+        const response = await userService.enableTwoFA(req.user);
+        return res
+            .status(StatusCodes.OK)
+            .json(
+                new ResponseSuccess(
+                    response,
+                    `Successfully enabled Two-Factor Authentication`
+                )
+            );
+    } catch (error) {
+        return res
+            .status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR)
+            .json(
+                new ResponseError(
+                    error.error,
+                    error.message || "Something went wrong in data fetch!"
+                )
+            );
+    }
+}
+
+const verifyTwoFA = async (req, res) => {
+    try {
+        const response = await userService.verifyTwoFA(req.user.userId, req.body.totp);
+        return res
+            .status(StatusCodes.OK)
+            .clearCookie("session2FAToken", {
+                httpOnly: true,
+                secure: true,
+                maxAge: 5 * 60 * 1000, // 15 mins
+            })
+            .cookie("accessToken", response.accessToken, {
+                httpOnly: true,
+                secure: true,
+                maxAge: 15 * 60 * 1000, // 15 mins
+            })
+            .cookie("refreshToken", response.refreshToken, {
+                httpOnly: true,
+                secure: true,
+                maxAge: 15 * 24 * 60 * 1000, // 15 days
+            })
+            .json(
+                new ResponseSuccess(
+                    { isCodeValid: response.isValid },
+                    `User is successfully authenticated`
+                )
+            );
+    } catch (error) {
+        return res
+            .status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR)
+            .json(
+                new ResponseError(
+                    error.error,
+                    error.message || "Something went wrong in data fetch!"
+                )
+            );
+    }
+}
+
 module.exports = {
     signupUser,
     signInUser,
     logoutUser,
     updateRole,
     getDetails,
+    enableTwoFA,
+    verifyTwoFA,
     updateDetails,
     getSelfDetails,
     refreshAccessToken,

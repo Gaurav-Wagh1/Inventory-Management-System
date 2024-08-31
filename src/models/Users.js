@@ -6,6 +6,7 @@ const util = require("util");
 const {
     ACCESS_TOKEN_SECRET_STRING,
     REFRESH_TOKEN_SECRET_STRING,
+    SESSION_TOKEN_SECRET_STRING
 } = require("../config/server-config.js");
 const { ApiError } = require("../utils/error/api-error.js");
 
@@ -97,6 +98,28 @@ usersSchema.methods.generateRefreshToken = async function () {
         );
     }
 };
+
+usersSchema.methods.generateSession2FAToken = async function () {
+    const signAsync = util.promisify(jwt.sign);
+    try {
+        const session2FAToken = await signAsync(
+            {
+                userId: this._id,
+            },
+            SESSION_TOKEN_SECRET_STRING,
+            {
+                expiresIn: "5m",
+            }
+        );
+        return session2FAToken;
+    } catch (error) {
+        console.log("Error generating session token");
+        throw new ApiError(
+            "Server Error",
+            "Internal Server Error, try again later"
+        );
+    }
+}
 
 usersSchema.methods.comparePassword = async function (passwordToCompare) {
     try {
