@@ -13,7 +13,7 @@ const signupUser = async (req, res) => {
         const data = {
             email: req.body.email,
             password: req.body.password,
-            admin: req.admin
+            admin: req.admin,
         };
         const response = await userService.signup(data);
         return res
@@ -53,7 +53,6 @@ const signInUser = async (req, res) => {
             email,
             password,
         });
-
         if (response.is2FAEnabled == undefined) {
             return res
                 .status(StatusCodes.OK)
@@ -67,14 +66,8 @@ const signInUser = async (req, res) => {
                     secure: true,
                     maxAge: 15 * 24 * 60 * 1000, // 15 days
                 })
-                .json(
-                    new ResponseSuccess(
-                        {},
-                        "User sign in successful"
-                    )
-                );
-        }
-        else if (response.is2FAEnabled == true) {
+                .json(new ResponseSuccess({}, "User sign in successful"));
+        } else if (response.is2FAEnabled == true) {
             return res
                 .status(StatusCodes.OK)
                 .cookie("session2FAToken", response.session2FAToken, {
@@ -82,9 +75,13 @@ const signInUser = async (req, res) => {
                     secure: true,
                     maxAge: 5 * 60 * 1000, // 5 mins
                 })
-                .json(new ResponseSuccess({ is2FAEnabled: response.is2FAEnabled }, "Enter Authenticator code"));
-        }
-        else {
+                .json(
+                    new ResponseSuccess(
+                        { is2FAEnabled: response.is2FAEnabled },
+                        "Enter Authenticator code"
+                    )
+                );
+        } else {
             return res
                 .status(StatusCodes.OK)
                 .cookie("accessToken", response.accessToken, {
@@ -297,11 +294,14 @@ const enableTwoFA = async (req, res) => {
                 )
             );
     }
-}
+};
 
 const verifyTwoFA = async (req, res) => {
     try {
-        const response = await userService.verifyTwoFA(req.user.userId, req.body.totp);
+        const response = await userService.verifyTwoFA(
+            req.user.userId,
+            req.body.totp
+        );
         return res
             .status(StatusCodes.OK)
             .clearCookie("session2FAToken", {
@@ -335,7 +335,46 @@ const verifyTwoFA = async (req, res) => {
                 )
             );
     }
-}
+};
+
+const disableTwoFA = async (req, res) => {
+    try {
+        const response = await userService.disableTwoFA(req.user);
+        return res
+            .status(StatusCodes.OK)
+            .json(
+                new ResponseSuccess(
+                    response,
+                    "TwoFA disabled, kindly enable it to avoid any security issues!"
+                )
+            );
+    } catch (error) {
+        return res
+            .status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR)
+            .json(
+                new ResponseError(
+                    error.error,
+                    error.message || "Something went wrong in disable twoFA!"
+                )
+            );
+    }
+};
+
+const handleOAuth = async (req, res) => {
+    return res
+        .status(StatusCodes.OK)
+        .cookie("accessToken", req.user.accessToken, {
+            httpOnly: true,
+            secure: true,
+            maxAge: 15 * 60 * 1000, // 15 mins
+        })
+        .cookie("refreshToken", req.user.refreshToken, {
+            httpOnly: true,
+            secure: true,
+            maxAge: 15 * 24 * 60 * 1000, // 15 days
+        })
+        .json(new ResponseSuccess({}, "User sign in successful"));
+};
 
 module.exports = {
     signupUser,
@@ -345,7 +384,9 @@ module.exports = {
     getDetails,
     enableTwoFA,
     verifyTwoFA,
+    disableTwoFA,
     updateDetails,
     getSelfDetails,
     refreshAccessToken,
+    handleOAuth,
 };

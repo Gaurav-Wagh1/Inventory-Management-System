@@ -22,12 +22,12 @@ const staffDetailSchema = new mongoose.Schema(
         },
         is2FAEnabled: {
             type: Boolean,
-            default: false
+            default: false,
         },
         twoFASecret: {
             type: String,
-            trim: true
-        }
+            trim: true,
+        },
     },
     { timestamps: true }
 );

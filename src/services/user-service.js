@@ -40,7 +40,10 @@ class UserService {
             await user.save();
 
             if (data.admin) {
-                const adminDetail = new AdminDetail({ user: user.id, is2FAEnabled: false });
+                const adminDetail = new AdminDetail({
+                    user: user.id,
+                    is2FAEnabled: false,
+                });
                 await adminDetail.save({ validateBeforeSave: false });
             }
             return {
@@ -66,6 +69,16 @@ class UserService {
                 );
             }
 
+            // user logged in through oauth
+            // user will update the password then only access the platform;
+            if (!user.password) {
+                throw new ApiError(
+                    "Oauth used for login!",
+                    "Update the password from login window",
+                    StatusCodes.NOT_ACCEPTABLE
+                );
+            }
+
             const isPasswordCorrect = await user.comparePassword(data.password);
             // incorrect password;
             if (!isPasswordCorrect) {
@@ -79,12 +92,16 @@ class UserService {
             let is2FAEnabled = undefined;
             switch (user.role) {
                 case "admin":
-                    const adminDetails = await AdminDetail.findOne({ user: user.id });
+                    const adminDetails = await AdminDetail.findOne({
+                        user: user.id,
+                    });
                     is2FAEnabled = adminDetails.is2FAEnabled;
                     break;
 
                 case "staff":
-                    const staffDetails = await StaffDetail.findOne({ user: user.id });
+                    const staffDetails = await StaffDetail.findOne({
+                        user: user.id,
+                    });
                     is2FAEnabled = staffDetails.is2FAEnabled;
                     break;
             }
@@ -104,15 +121,15 @@ class UserService {
             if (is2FAEnabled === undefined) {
                 return {
                     accessToken,
-                    refreshToken
-                }
-            }   //  2FA is not enabled by the admin / staff;
+                    refreshToken,
+                };
+            } //  2FA is not enabled by the admin / staff;
             else {
                 return {
                     accessToken,
                     refreshToken,
-                    is2FAEnabled
-                }
+                    is2FAEnabled,
+                };
             }
         } catch (error) {
             throw error;
@@ -195,7 +212,9 @@ class UserService {
                             customerDetails[key] = userDetails[key];
                         }
                         await customerDetails.save();
-                        updatedUserDetails = await CustomerDetail.findById(customerDetails.id);
+                        updatedUserDetails = await CustomerDetail.findById(
+                            customerDetails.id
+                        );
                     }
                     break;
                 case "staff":
@@ -212,7 +231,9 @@ class UserService {
                             staffDetails[key] = userDetails[key];
                         }
                         await staffDetails.save();
-                        updatedUserDetails = await StaffDetail.findById(staffDetails.id);
+                        updatedUserDetails = await StaffDetail.findById(
+                            staffDetails.id
+                        );
                     }
                     break;
                 case "admin":
@@ -229,7 +250,9 @@ class UserService {
                             adminDetails[key] = userDetails[key];
                         }
                         await adminDetails.save();
-                        updatedUserDetails = await AdminDetail.findById(adminDetails.id);
+                        updatedUserDetails = await AdminDetail.findById(
+                            adminDetails.id
+                        );
                     }
                     break;
 
@@ -289,18 +312,22 @@ class UserService {
                 user.refreshToken = "";
                 await user.save();
 
-                const staffDetail = new StaffDetail({ user: user.id, is2FAEnabled: false });
+                const staffDetail = new StaffDetail({
+                    user: user.id,
+                    is2FAEnabled: false,
+                });
                 await staffDetail.save({ validateBeforeSave: false });
-            }
-            else if (role == "admin") {
+            } else if (role == "admin") {
                 user.role = "admin";
                 user.refreshToken = "";
                 await user.save();
 
-                const adminDetail = new AdminDetail({ user: user.id, is2FAEnabled: false });
+                const adminDetail = new AdminDetail({
+                    user: user.id,
+                    is2FAEnabled: false,
+                });
                 await adminDetail.save({ validateBeforeSave: false });
-            }
-            else if (role == "customer") {
+            } else if (role == "customer") {
                 user.role = "customer";
                 user.refreshToken = "";
                 await user.save();
@@ -396,26 +423,39 @@ class UserService {
             const user = await User.findById(userId);
 
             if (!user) {
-                throw new ApiError("No user found", "No such user found, signup first!", StatusCodes.BAD_REQUEST);
+                throw new ApiError(
+                    "No user found",
+                    "No such user found, signup first!",
+                    StatusCodes.BAD_REQUEST
+                );
             }
 
             if (user.role === "customer") {
-                throw new ApiError("Un-Authorized user", "You are not authorized to perform this action!", StatusCodes.UNAUTHORIZED);
+                throw new ApiError(
+                    "Un-Authorized user",
+                    "You are not authorized to perform this action!",
+                    StatusCodes.UNAUTHORIZED
+                );
             }
 
             const secret = authenticator.generateSecret();
 
             if (user.role == "admin") {
-                await AdminDetail.findOneAndUpdate({ user: user.id }, {
-                    twoFASecret: secret,
-                    is2FAEnabled: true
-                });
-            }
-            else if (user.role == "staff") {
-                await StaffDetail.findOneAndUpdate({ user: user.id }, {
-                    twoFASecret: secret,
-                    is2FAEnabled: true
-                });
+                await AdminDetail.findOneAndUpdate(
+                    { user: user.id },
+                    {
+                        twoFASecret: secret,
+                        is2FAEnabled: true,
+                    }
+                );
+            } else if (user.role == "staff") {
+                await StaffDetail.findOneAndUpdate(
+                    { user: user.id },
+                    {
+                        twoFASecret: secret,
+                        is2FAEnabled: true,
+                    }
+                );
             }
             // QR code of this secret will be generated on client side;
             return { secret, is2FAEnabled: true };
@@ -429,24 +469,38 @@ class UserService {
             const user = await User.findById(userId);
 
             if (!user) {
-                throw new ApiError("No such user", "No such user exist, sign up first", StatusCodes.BAD_REQUEST);
+                throw new ApiError(
+                    "No such user",
+                    "No such user exist, sign up first",
+                    StatusCodes.BAD_REQUEST
+                );
             }
 
             let userDetails = {};
             if (user.role == "admin") {
                 userDetails = await AdminDetail.findOne({ user: userId });
-            }
-            else if (user.role == "staff") {
+            } else if (user.role == "staff") {
                 userDetails = await StaffDetail.findOne({ user: userId });
             }
 
             if (!userDetails.is2FAEnabled) {
-                throw new ApiError("Authentication disabled", "Two-Factor Authentication is already disabled", StatusCodes.BAD_REQUEST);
+                throw new ApiError(
+                    "Authentication disabled",
+                    "Two-Factor Authentication is already disabled",
+                    StatusCodes.BAD_REQUEST
+                );
             }
 
-            const isValid = authenticator.verify({ token, secret: userDetails.twoFASecret });
+            const isValid = authenticator.verify({
+                token,
+                secret: userDetails.twoFASecret,
+            });
             if (!isValid) {
-                throw new ApiError("Invalid code", "Invalid OTP, Re-enter the authenticator code", StatusCodes.BAD_REQUEST);
+                throw new ApiError(
+                    "Invalid code",
+                    "Invalid OTP, Re-enter the authenticator code",
+                    StatusCodes.BAD_REQUEST
+                );
             }
 
             const accessToken = await user.generateAccessToken();
@@ -455,6 +509,36 @@ class UserService {
             await user.save();
 
             return { accessToken, refreshToken, isValid };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async disableTwoFA({ userId }) {
+        try {
+            const user = await User.findById(userId);
+
+            let userDetails = {};
+            switch (user.role) {
+                case "admin":
+                    userDetails = await AdminDetail.findOne({ user: userId });
+                    break;
+                case "staff":
+                    userDetails = await StaffDetail.findOne({ user: userId });
+                    break;
+                default:
+                    throw new ApiError(
+                        "Un authorized",
+                        "You are not authorized to perform this action!",
+                        StatusCodes.BAD_REQUEST
+                    );
+            }
+
+            userDetails.is2FAEnabled = false;
+            userDetails.twoFASecret = "";
+            await userDetails.save();
+
+            return true;
         } catch (error) {
             throw error;
         }

@@ -6,7 +6,7 @@ const util = require("util");
 const {
     ACCESS_TOKEN_SECRET_STRING,
     REFRESH_TOKEN_SECRET_STRING,
-    SESSION_TOKEN_SECRET_STRING
+    SESSION_TOKEN_SECRET_STRING,
 } = require("../config/server-config.js");
 const { ApiError } = require("../utils/error/api-error.js");
 
@@ -22,7 +22,15 @@ const usersSchema = new mongoose.Schema(
         },
         password_hash: {
             type: String,
-            required: [true, "provide password"],
+            required: function () {
+                if (
+                    this.oauthProviders === undefined ||
+                    !this.oauthProviders.length
+                ) {
+                    return true;
+                }
+                return false;
+            },
             alias: "password",
         },
         role: {
@@ -40,6 +48,26 @@ const usersSchema = new mongoose.Schema(
         refreshToken: {
             type: String,
         },
+        oauthProviders: [
+            {
+                provider: {
+                    type: String,
+                    required: true,
+                },
+                providerId: {
+                    type: String,
+                    unique: true,
+                    required: true,
+                },
+                username: {
+                    type: String,
+                    trim: true,
+                },
+                profileUrl: {
+                    type: String,
+                },
+            },
+        ],
     },
     { timestamps: true }
 );
@@ -99,6 +127,7 @@ usersSchema.methods.generateRefreshToken = async function () {
     }
 };
 
+// a temporary token for 2-Factor authentication;
 usersSchema.methods.generateSession2FAToken = async function () {
     const signAsync = util.promisify(jwt.sign);
     try {
@@ -119,7 +148,7 @@ usersSchema.methods.generateSession2FAToken = async function () {
             "Internal Server Error, try again later"
         );
     }
-}
+};
 
 usersSchema.methods.comparePassword = async function (passwordToCompare) {
     try {

@@ -12,6 +12,8 @@ const {
     getDetails,
     enableTwoFA,
     verifyTwoFA,
+    disableTwoFA,
+    handleOAuth,
 } = require("../controllers/user-controller.js");
 const {
     validateSignup,
@@ -24,6 +26,8 @@ const {
     validate2FARequest,
     validateAdminRequest,
 } = require("../middlewares/user-middleware.js");
+const passport = require("passport");
+const { ResponseError } = require("../utils/response/response.js");
 
 // create the first admin account(needs admin secret along with email and pass);
 router.post("/admin", validateAdminRequest, validateSignup, signupUser);
@@ -50,7 +54,40 @@ router.get("/users/:id", validateGetDetailsRequest, getDetails); // get other's 
 
 // ------------------------------------------------------------------- 2-Factor-Authentication
 
-router.post('/users/enable-2fa', validateRequest, enableTwoFA);
-router.post('/users/verify-2fa', validate2FARequest, verifyTwoFA);
+router.post("/users/enable-2fa", validateRequest, enableTwoFA);
+
+router.post("/users/verify-2fa", validate2FARequest, verifyTwoFA);
+
+router.post("/users/disable-2fa", validateRequest, disableTwoFA);
+
+// ------------------------------------------------------------------- oauth
+
+// initiate github oauth
+router.get(
+    "/auth/github",
+    passport.authenticate("github", { scope: ["user:email"] })
+);
+
+// successful oauth;
+router.get(
+    "/auth/github/callback",
+    passport.authenticate("github", {
+        session: false,
+        failureRedirect: "/api/v1/auth/github/failure",
+    }),
+    handleOAuth
+);
+
+// un-successful oauth
+router.get("/auth/github/failure", (req, res) =>
+    res
+        .status(401)
+        .json(
+            new ResponseError(
+                "Oauth failed",
+                "Github authentication failed, try again later"
+            )
+        )
+);
 
 module.exports = router;

@@ -18,16 +18,17 @@ async function validateAdminRequest(req, res, next) {
     if (!req.body.adminSecret) {
         return res
             .status(StatusCodes.BAD_REQUEST)
-            .json(
-                new ResponseError("Signup failed", "Provide admin secret!")
-            );
+            .json(new ResponseError("Signup failed", "Provide admin secret!"));
     }
 
     if (req.body.adminSecret !== ADMIN_SECRET) {
         return res
             .status(StatusCodes.BAD_REQUEST)
             .json(
-                new ResponseError("Invalid secret", "Provide valid admin secret!")
+                new ResponseError(
+                    "Invalid secret",
+                    "Provide valid admin secret!"
+                )
             );
     }
 
@@ -170,12 +171,10 @@ async function validateRefreshAccessToken(req, res, next) {
     try {
         const payload = jwt.verify(token, REFRESH_TOKEN_SECRET_STRING);
         if (!payload || !payload.userId) {
-            return res
-                .status(StatusCodes.BAD_REQUEST)
-                .json({
-                    error: "Unauthorized user",
-                    message: "Please Sign in!",
-                });
+            return res.status(StatusCodes.BAD_REQUEST).json({
+                error: "Unauthorized user",
+                message: "Please Sign in!",
+            });
         }
         req.user = { refreshToken: token, userId: payload.userId };
     } catch (error) {
@@ -335,25 +334,33 @@ async function validate2FARequest(req, res, next) {
     if (!req.cookies.session2FAToken && !req.body.session2FAToken) {
         return res
             .status(StatusCodes.BAD_REQUEST)
-            .json(new ResponseError("Two Factor Authentication Failed", "Please Sign in again!"));
+            .json(
+                new ResponseError(
+                    "Two Factor Authentication Failed",
+                    "Please Sign in again!"
+                )
+            );
     }
 
     if (!req.body.totp) {
         return res
             .status(StatusCodes.BAD_REQUEST)
-            .json(new ResponseError("Invalid credentials provided", "Please provide a valid code from authenticator app!"));
+            .json(
+                new ResponseError(
+                    "Invalid credentials provided",
+                    "Please provide a valid code from authenticator app!"
+                )
+            );
     }
 
     const token = req.cookies.session2FAToken || req.body.session2FAToken;
     try {
         const payload = jwt.verify(token, SESSION_TOKEN_SECRET_STRING);
         if (!payload || !payload.userId) {
-            return res
-                .status(StatusCodes.BAD_REQUEST)
-                .json({
-                    error: "Unauthorized user",
-                    message: "Please Sign in!",
-                });
+            return res.status(StatusCodes.BAD_REQUEST).json({
+                error: "Unauthorized user",
+                message: "Please Sign in!",
+            });
         }
         req.user = { userId: payload.userId };
     } catch (error) {
@@ -361,7 +368,10 @@ async function validate2FARequest(req, res, next) {
             return res
                 .status(StatusCodes.UNAUTHORIZED)
                 .json(
-                    new ResponseError("Token expired", "Time limit exceeded, kindly sign in again!")
+                    new ResponseError(
+                        "Token expired",
+                        "Time limit exceeded, kindly sign in again!"
+                    )
                 );
         }
         return res
