@@ -78,14 +78,8 @@ passport.use(
                             profileUrl: profile.profileUrl,
                         });
                     }
+                    await user.save();
                 }
-
-                const userAccessToken = await user.generateAccessToken();
-                const userRefreshToken = await user.generateRefreshToken();
-
-                user.refreshToken = userRefreshToken;
-                await user.save();
-                user.accessToken = userAccessToken;
                 done(null, user);
             } catch (error) {
                 done(error);

@@ -490,7 +490,6 @@ class UserService {
                     StatusCodes.BAD_REQUEST
                 );
             }
-
             const isValid = authenticator.verify({
                 token,
                 secret: userDetails.twoFASecret,
@@ -539,6 +538,32 @@ class UserService {
             await userDetails.save();
 
             return true;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async handleOauth(userData) {
+        try {
+            if (userData.role === "customer") {
+                const accessToken = await userData.generateAccessToken();
+                const refreshToken = await userData.generateRefreshToken();
+                return { accessToken, refreshToken };
+            }
+
+            if (userData.is2FAEnabled) {
+                const session2FAToken =
+                    await userData.generateSession2FAToken();
+                return { is2FAEnabled: userData.is2FAEnabled, session2FAToken };
+            } else {
+                const accessToken = await userData.generateAccessToken();
+                const refreshToken = await userData.generateRefreshToken();
+                return {
+                    is2FAEnabled: userData.is2FAEnabled,
+                    accessToken,
+                    refreshToken,
+                };
+            }
         } catch (error) {
             throw error;
         }

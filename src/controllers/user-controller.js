@@ -49,10 +49,15 @@ const signupUser = async (req, res) => {
 const signInUser = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const response = await userService.signIn({
-            email,
-            password,
-        });
+        let response;
+        if (req.path.includes("/users/signin")) {
+            response = await userService.signIn({
+                email,
+                password,
+            });
+        } else {
+            response = await userService.handleOauth(req.user);
+        }
         if (response.is2FAEnabled == undefined) {
             return res
                 .status(StatusCodes.OK)
@@ -360,22 +365,6 @@ const disableTwoFA = async (req, res) => {
     }
 };
 
-const handleOAuth = async (req, res) => {
-    return res
-        .status(StatusCodes.OK)
-        .cookie("accessToken", req.user.accessToken, {
-            httpOnly: true,
-            secure: true,
-            maxAge: 15 * 60 * 1000, // 15 mins
-        })
-        .cookie("refreshToken", req.user.refreshToken, {
-            httpOnly: true,
-            secure: true,
-            maxAge: 15 * 24 * 60 * 1000, // 15 days
-        })
-        .json(new ResponseSuccess({}, "User sign in successful"));
-};
-
 module.exports = {
     signupUser,
     signInUser,
@@ -388,5 +377,4 @@ module.exports = {
     updateDetails,
     getSelfDetails,
     refreshAccessToken,
-    handleOAuth,
 };

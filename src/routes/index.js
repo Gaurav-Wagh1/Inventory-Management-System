@@ -13,7 +13,6 @@ const {
     enableTwoFA,
     verifyTwoFA,
     disableTwoFA,
-    handleOAuth,
 } = require("../controllers/user-controller.js");
 const {
     validateSignup,
@@ -75,7 +74,7 @@ router.get(
         session: false,
         failureRedirect: "/api/v1/auth/github/failure",
     }),
-    handleOAuth
+    signInUser
 );
 
 // un-successful oauth

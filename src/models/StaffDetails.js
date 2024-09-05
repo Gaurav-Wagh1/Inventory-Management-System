@@ -47,7 +47,7 @@ staffDetailSchema
 staffDetailSchema.virtual("safeDetails").get(function () {
     return {
         fullName: this.fullName,
-        salary: this.salary.toString(),
+        salary: this.salary?.toString(),
     };
 });
 
