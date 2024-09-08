@@ -46,6 +46,7 @@ staffDetailSchema
 
 staffDetailSchema.virtual("safeDetails").get(function () {
     return {
+        id: this.id,
         fullName: this.fullName,
         salary: this.salary?.toString(),
     };

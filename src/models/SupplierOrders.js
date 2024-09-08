@@ -7,14 +7,63 @@ const supplierOrdersSchema = new mongoose.Schema(
             ref: "SupplierProduct",
             index: true,
         },
-        unitPrice: {
-            type: mongoose.Schema.Types.Decimal128,
+        staffId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
         },
-        quantity: {
-            type: Number,
+        productDetails: {
+            unitPrice: {
+                type: mongoose.Schema.Types.Decimal128,
+                required: true,
+            },
+            quantity: {
+                type: Number,
+                required: true,
+            },
+            total: {
+                type: mongoose.Schema.Types.Decimal128,
+                required: true,
+            },
+            lastModified: {
+                type: Date,
+                default: Date.now,
+            },
+            previousDetails: [
+                {
+                    unitPrice: mongoose.Schema.Types.Decimal128,
+                    quantity: Number,
+                    total: mongoose.Schema.Types.Decimal128,
+                    modifiedBy: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: "User",
+                    },
+                    modifiedDate: {
+                        type: Date,
+                        default: Date.now,
+                    },
+                    comment: {
+                        type: String,
+                    },
+                },
+            ],
         },
-        amount: {
-            type: Number,
+        status: {
+            type: String,
+            enum: [
+                "ORDER PLACED",
+                "PENDING",
+                "ACCEPTED",
+                "COMPLETED",
+                "MODIFIED",
+                "REJECTED",
+                "CANCELLED",
+            ],
+            default: "ORDER PLACED",
+        },
+        lastModifiedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
         },
     },
     { timestamps: true }

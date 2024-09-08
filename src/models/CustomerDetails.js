@@ -64,9 +64,18 @@ customerDetailsSchema
     });
 
 customerDetailsSchema.virtual("safeDetails").get(function () {
-    const { fullName, phoneNumber, address, city, state, country, postalCode } =
-        this;
+    const {
+        id,
+        fullName,
+        phoneNumber,
+        address,
+        city,
+        state,
+        country,
+        postalCode,
+    } = this;
     return {
+        id,
         fullName,
         phoneNumber,
         address,

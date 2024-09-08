@@ -5,6 +5,7 @@ const {
     AdminDetail,
     CustomerDetail,
     StaffDetail,
+    SupplierDetail,
 } = require("../models/index.js");
 const { ApiError } = require("../utils/error/api-error.js");
 
@@ -255,6 +256,24 @@ class UserService {
                         );
                     }
                     break;
+                case "supplier":
+                    let supplierDetails = await SupplierDetail.findOne({
+                        user: user.id,
+                    });
+                    if (!supplierDetails) {
+                        userDetails.user = user.id;
+                        updatedUserDetails =
+                            await SupplierDetail.create(userDetails);
+                    } else {
+                        for (const key in userDetails) {
+                            supplierDetails[key] = userDetails[key];
+                        }
+                        await supplierDetails.save();
+                        updatedUserDetails = await SupplierDetail.findById(
+                            supplierDetails.id
+                        );
+                    }
+                    break;
 
                 default:
                     throw new ApiError(
@@ -355,6 +374,13 @@ class UserService {
                 case "admin":
                     userDetails = await AdminDetail.findOne({ user: user.id });
                     break;
+
+                case "supplier":
+                    userDetails = await SupplierDetail.findOne({
+                        user: user.id,
+                    });
+                    break;
+
                 default:
                     throw new ApiError(
                         "Invalid role",
@@ -375,7 +401,7 @@ class UserService {
         try {
             const selfUser = await User.findById(userSelfData.userId);
 
-            if (selfUser.role === "customer") {
+            if (selfUser.role === "customer" || selfUser.role === "supplier") {
                 throw new ApiError(
                     "UnAuthorized user",
                     "You are not authorized to perform this action!",

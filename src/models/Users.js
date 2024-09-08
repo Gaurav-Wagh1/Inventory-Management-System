@@ -35,7 +35,7 @@ const usersSchema = new mongoose.Schema(
         },
         role: {
             type: String,
-            enum: ["customer", "staff", "admin"],
+            enum: ["customer", "staff", "admin", "supplier"],
             default: "customer",
             required: true,
         },
@@ -52,12 +52,9 @@ const usersSchema = new mongoose.Schema(
             {
                 provider: {
                     type: String,
-                    required: true,
                 },
                 providerId: {
                     type: String,
-                    unique: true,
-                    required: true,
                 },
                 username: {
                     type: String,
@@ -76,6 +73,7 @@ usersSchema
     .virtual("safeUser") // only return required fields;
     .get(function () {
         return {
+            id: this.id,
             email: this.email,
             role: this.role,
         };

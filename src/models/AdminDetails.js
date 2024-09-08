@@ -43,6 +43,7 @@ adminSchema
 
 adminSchema.virtual("safeDetails").get(function () {
     return {
+        id: this.id,
         fullName: this.fullName,
     };
 });

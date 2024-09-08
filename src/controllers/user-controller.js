@@ -50,12 +50,12 @@ const signInUser = async (req, res) => {
     try {
         const { email, password } = req.body;
         let response;
-        if (req.path.includes("/users/signin")) {
+        if (req.path.includes("/signin")) {
             response = await userService.signIn({
                 email,
                 password,
             });
-        } else {
+        } else if (req.path.includes("/auth/github/callback")) {
             response = await userService.handleOauth(req.user);
         }
         if (response.is2FAEnabled == undefined) {
