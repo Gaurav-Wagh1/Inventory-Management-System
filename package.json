@@ -6,7 +6,8 @@
   "scripts": {
     "format": "npx prettier --write .",
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "test": "jest"
   },
   "author": "Gaurav Wagh",
   "license": "ISC",
@@ -25,6 +26,7 @@
     "passport-github2": "^0.1.12"
   },
   "devDependencies": {
+    "jest": "^29.7.0",
     "nodemon": "^3.1.4",
     "prettier": "^3.3.3"
   }

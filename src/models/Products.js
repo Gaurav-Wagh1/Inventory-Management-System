@@ -16,11 +16,20 @@ const productSchema = new mongoose.Schema(
         image: {
             type: String,
         },
-        unitPrice: {
-            type: Number,
+        costPrice: {
+            type: mongoose.Schema.Types.Decimal128,
+        },
+        sellingPrice: {
+            type: mongoose.Schema.Types.Decimal128,
         },
         unitsLeft: {
-            type: mongoose.Schema.Types.Decimal128,
+            type: Number,
+        },
+        threshold: {
+            type: Number,
+        },
+        isActive: {
+            type: Boolean,
         },
     },
     { timestamps: true }
